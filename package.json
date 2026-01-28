@@ -1,0 +1,28 @@
+{
+  "name": "lab-inventory-system",
+  "version": "1.0.0",
+  "description": "Modern Lab Chemical & Equipment Inventory Management System",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "install-all": "npm install && cd client && npm install",
+    "seed": "node server/seed.js"
+  },
+  "keywords": ["inventory", "laboratory", "chemicals", "equipment"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "sql.js": "^1.10.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "multer": "^2.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
