@@ -2,12 +2,14 @@
 
 A comprehensive lab chemical and equipment inventory management system for the Kuang Research Lab at UW-Madison.
 
-🌐 **Live Demo**: [https://kuanglab.github.io/kuanglab-inventory/](https://kuanglab.github.io/kuanglab-inventory/)
+🌐 **Live Demo**: [https://dibisa.github.io/kuanglab-inventory/](https://dibisa.github.io/kuanglab-inventory/)
+
+> **Note**: The public demo uses sample data only. Actual lab inventory data is private and not included in this repository.
 
 ## Features
 
-- 🧪 **Chemical Inventory** - Track 138+ chemicals with CAS numbers, SDS links, hazard info
-- 🔬 **Equipment Management** - 25 lab instruments with specifications (range, accuracy, resolution)
+- 🧪 **Chemical Inventory** - Track chemicals with CAS numbers, SDS links, hazard info
+- 🔬 **Equipment Management** - Lab instruments with specifications (range, accuracy, resolution)
 - 📅 **Reservation System** - Calendar-based equipment booking
 - 💰 **Budget Tracking** - Financial overview with category breakdowns
 - 📦 **Consumables** - Lab supplies organized by category

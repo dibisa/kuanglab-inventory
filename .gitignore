@@ -30,3 +30,23 @@ __pycache__/
 # Temp files
 *.tmp
 *.temp
+
+# ===========================================
+# SENSITIVE DATA - DO NOT COMMIT TO PUBLIC REPO
+# ===========================================
+
+# Excel files with inventory data
+*.xlsx
+*.xls
+chemical inventory.pdf
+
+# Database with chemical/budget data
+server/inventory.db
+
+# Public data export (contains sensitive info)
+client/public/data.json
+
+# Python import scripts (may contain paths/data)
+import_*.py
+organize_data.py
+populate_chemical_data.py

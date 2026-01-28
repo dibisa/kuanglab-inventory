@@ -1,0 +1,21 @@
+{
+  "chemicals": [
+    {"id": 1, "name": "Sample Chemical A", "cas_number": "000-00-0", "formula": "H2O", "hazard_class": "Non-hazardous", "storage_conditions": "Room temperature", "quantity": 100, "unit": "g"},
+    {"id": 2, "name": "Sample Chemical B", "cas_number": "000-00-1", "formula": "NaCl", "hazard_class": "Non-hazardous", "storage_conditions": "Room temperature", "quantity": 500, "unit": "g"}
+  ],
+  "equipment": [
+    {"id": 1, "name": "Sample Instrument", "manufacturer": "Demo Corp", "model": "Model X", "category": "Analysis", "status": "Available", "location": "Lab 101"},
+    {"id": 2, "name": "Sample Device", "manufacturer": "Demo Corp", "model": "Model Y", "category": "Measurement", "status": "Available", "location": "Lab 102"}
+  ],
+  "locations": [
+    {"id": 1, "name": "Lab 101", "description": "Main laboratory"},
+    {"id": 2, "name": "Lab 102", "description": "Secondary laboratory"}
+  ],
+  "reservations": [],
+  "budget_items": [
+    {"id": 1, "item_name": "Sample Item", "category": "General", "cost": 100, "quantity": 1}
+  ],
+  "consumables": [
+    {"id": 1, "name": "Sample Consumable", "category": "General", "quantity": 10, "unit": "pcs"}
+  ]
+}

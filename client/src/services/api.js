@@ -9,7 +9,11 @@ async function loadStaticData() {
   if (staticData) return staticData;
   
   try {
-    const response = await fetch(`${import.meta.env.BASE_URL}data.json`);
+    // Try to load real data first, fall back to sample data
+    let response = await fetch(`${import.meta.env.BASE_URL}data.json`);
+    if (!response.ok) {
+      response = await fetch(`${import.meta.env.BASE_URL}sample-data.json`);
+    }
     staticData = await response.json();
     return staticData;
   } catch (error) {
