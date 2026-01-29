@@ -318,7 +318,9 @@ function AddEquipmentModal({ locations, onClose, onSuccess }) {
     measurement_units: '',
     operating_conditions: '',
     limitations: '',
-    notes: ''
+    notes: '',
+    sds_url: '',
+    tech_url: ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -353,6 +355,28 @@ function AddEquipmentModal({ locations, onClose, onSuccess }) {
           <div className="modal-body">
             <h4 style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>Basic Information</h4>
             <div className="form-grid">
+                            {/* SDS/Manual URL */}
+                            <div className="form-group">
+                              <label className="form-label">SDS/Manual URL</label>
+                              <input
+                                type="url"
+                                className="form-input"
+                                value={formData.sds_url}
+                                onChange={e => setFormData({ ...formData, sds_url: e.target.value })}
+                                placeholder="https://..."
+                              />
+                            </div>
+                            {/* Technical Paper URL */}
+                            <div className="form-group">
+                              <label className="form-label">Technical Paper URL</label>
+                              <input
+                                type="url"
+                                className="form-input"
+                                value={formData.tech_url}
+                                onChange={e => setFormData({ ...formData, tech_url: e.target.value })}
+                                placeholder="https://..."
+                              />
+                            </div>
               <div className="form-group full-width">
                 <label className="form-label">Instrument Name *</label>
                 <input

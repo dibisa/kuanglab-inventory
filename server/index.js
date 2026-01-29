@@ -473,8 +473,8 @@ app.post('/api/import/:type', upload.single('file'), (req, res) => {
         const name = findColumn(row, 'name');
         if (name) {
           runSql(
-            `INSERT INTO chemicals (name, cas_number, formula, molecular_weight, quantity, unit, hazard_class, supplier, catalog_number, lot_number, category, purity, state, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO chemicals (name, cas_number, formula, molecular_weight, quantity, unit, hazard_class, supplier, catalog_number, lot_number, category, purity, state, notes, sds_url, tech_url)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               name,
               findColumn(row, 'cas_number'),
@@ -489,7 +489,9 @@ app.post('/api/import/:type', upload.single('file'), (req, res) => {
               findColumn(row, 'category'),
               findColumn(row, 'purity'),
               findColumn(row, 'state'),
-              findColumn(row, 'notes')
+              findColumn(row, 'notes'),
+              findColumn(row, 'sds_url'),
+              findColumn(row, 'tech_url')
             ]
           );
           imported++;

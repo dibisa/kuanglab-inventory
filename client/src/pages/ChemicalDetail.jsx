@@ -377,15 +377,48 @@ function ChemicalDetail() {
                 <div className="detail-item-value">{chemical.storage_conditions || 'Not specified'}</div>
               )}
             </div>
-            {chemical.sds_url && (
-              <div className="detail-item">
-                <div className="detail-item-label">Safety Data Sheet</div>
-                <a href={chemical.sds_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
-                  <ExternalLink size={16} />
-                  View SDS
-                </a>
-              </div>
-            )}
+            <div className="detail-item">
+              <div className="detail-item-label">Safety Data Sheet (SDS) URL</div>
+              {editing ? (
+                <input
+                  type="url"
+                  className="form-input"
+                  value={formData.sds_url || ''}
+                  onChange={(e) => setFormData({ ...formData, sds_url: e.target.value })}
+                  placeholder="https://..."
+                />
+              ) : (
+                chemical.sds_url ? (
+                  <a href={chemical.sds_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                    <ExternalLink size={16} />
+                    View SDS
+                  </a>
+                ) : (
+                  <span style={{ color: 'var(--text-secondary)' }}>Not specified</span>
+                )
+              )}
+            </div>
+            <div className="detail-item">
+              <div className="detail-item-label">Technical Paper URL</div>
+              {editing ? (
+                <input
+                  type="url"
+                  className="form-input"
+                  value={formData.tech_url || ''}
+                  onChange={(e) => setFormData({ ...formData, tech_url: e.target.value })}
+                  placeholder="https://..."
+                />
+              ) : (
+                chemical.tech_url ? (
+                  <a href={chemical.tech_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                    <ExternalLink size={16} />
+                    View Technical Paper
+                  </a>
+                ) : (
+                  <span style={{ color: 'var(--text-secondary)' }}>Not specified</span>
+                )
+              )}
+            </div>
           </div>
         </div>
 

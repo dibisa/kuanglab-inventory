@@ -301,7 +301,9 @@ function AddChemicalModal({ locations, onClose, onSuccess }) {
     lot_number: '',
     location_id: '',
     storage_conditions: '',
-    notes: ''
+    notes: '',
+    sds_url: '',
+    tech_url: ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -335,6 +337,30 @@ function AddChemicalModal({ locations, onClose, onSuccess }) {
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="form-grid">
+                            {/* SDS URL */}
+                            <div className="form-group">
+                              <label htmlFor="sds_url">SDS URL</label>
+                              <input
+                                type="url"
+                                id="sds_url"
+                                className="form-input"
+                                value={formData.sds_url}
+                                onChange={e => setFormData({ ...formData, sds_url: e.target.value })}
+                                placeholder="https://..."
+                              />
+                            </div>
+                            {/* Technical Paper URL */}
+                            <div className="form-group">
+                              <label htmlFor="tech_url">Technical Paper URL</label>
+                              <input
+                                type="url"
+                                id="tech_url"
+                                className="form-input"
+                                value={formData.tech_url}
+                                onChange={e => setFormData({ ...formData, tech_url: e.target.value })}
+                                placeholder="https://..."
+                              />
+                            </div>
               <div className="form-group full-width">
                 <label className="form-label">Chemical Name *</label>
                 <input

@@ -203,6 +203,36 @@ function EquipmentDetail() {
               )}
             </div>
             <div className="detail-item">
+              <div className="detail-item-label">SDS/Manual URL</div>
+              {editing ? (
+                <input type="url" className="form-input" value={formData.sds_url || ''} onChange={(e) => setFormData({ ...formData, sds_url: e.target.value })} placeholder="https://..." />
+              ) : (
+                equipment.sds_url ? (
+                  <a href={equipment.sds_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                    <ExternalLink size={16} />
+                    View SDS/Manual
+                  </a>
+                ) : (
+                  <span style={{ color: 'var(--text-secondary)' }}>Not specified</span>
+                )
+              )}
+            </div>
+            <div className="detail-item">
+              <div className="detail-item-label">Technical Paper URL</div>
+              {editing ? (
+                <input type="url" className="form-input" value={formData.tech_url || ''} onChange={(e) => setFormData({ ...formData, tech_url: e.target.value })} placeholder="https://..." />
+              ) : (
+                equipment.tech_url ? (
+                  <a href={equipment.tech_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                    <ExternalLink size={16} />
+                    View Technical Paper
+                  </a>
+                ) : (
+                  <span style={{ color: 'var(--text-secondary)' }}>Not specified</span>
+                )
+              )}
+            </div>
+            <div className="detail-item">
               <div className="detail-item-label">Manufacturer</div>
               {editing ? (
                 <input type="text" className="form-input" value={formData.manufacturer || ''} onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })} />
