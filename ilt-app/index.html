@@ -1,0 +1,693 @@
+<title>Relaxation ILT Bench</title>
+<meta name="description" content="Upload x/y decay data and get T1, T2 or D distributions instantly (BRD, NNLS, discrete fit).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #eef2f1;
+  --panel: #ffffff;
+  --panel-2: #f6f8f8;
+  --ink: #152120;
+  --ink-2: #4b5d5b;
+  --ink-3: #7c8d8b;
+  --rule: #d3dcda;
+  --accent: #0e6b66;
+  --accent-soft: rgba(14, 107, 102, 0.14);
+  --fit: #c2410c;
+  --dots: #5f7471;
+  --warn-bg: #fff4de;
+  --warn-ink: #7a4b00;
+  --focus: #1b7fd6;
+  --grid: rgba(21, 33, 32, 0.08);
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d1413; --panel: #151f1e; --panel-2: #1b2726; --ink: #e2ecea; --ink-2: #a9bcb9; --ink-3: #7d918e;
+    --rule: #2b3a38; --accent: #4cc3b9; --accent-soft: rgba(76, 195, 185, 0.18); --fit: #f28b4b; --dots: #93a8a5;
+    --warn-bg: #3a2c10; --warn-ink: #f3cf8a; --focus: #6cb6ff; --grid: rgba(226, 236, 234, 0.08);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1413; --panel: #151f1e; --panel-2: #1b2726; --ink: #e2ecea; --ink-2: #a9bcb9; --ink-3: #7d918e;
+  --rule: #2b3a38; --accent: #4cc3b9; --accent-soft: rgba(76, 195, 185, 0.18); --fit: #f28b4b; --dots: #93a8a5;
+  --warn-bg: #3a2c10; --warn-ink: #f3cf8a; --focus: #6cb6ff; --grid: rgba(226, 236, 234, 0.08);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); padding-inline: 16px; padding-block: 18px 40px; }
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 16px; }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+h1 { font: 600 24px/1.1 var(--cond); letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+h1 small { font: 500 13px var(--mono); color: var(--ink-3); margin-left: 8px; letter-spacing: 0; }
+.tag { color: var(--ink-2); max-width: 70ch; margin: 0; }
+.layout { display: grid; grid-template-columns: minmax(290px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; }
+aside.controls { display: grid; gap: 0; }
+aside.controls section { padding: 14px 16px; border-top: 1px solid var(--rule); display: grid; gap: 10px; }
+aside.controls section:first-child { border-top: 0; }
+h2 { font: 600 12px var(--cond); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin: 0; }
+label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-2); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+input[type=number], input[type=text], select, textarea {
+  font: 13px var(--mono); color: var(--ink); background: var(--panel-2); border: 1px solid var(--rule); border-radius: 5px; padding: 6px 8px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 84px; line-height: 1.35; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, .drop:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink); }
+.drop { border: 1.5px dashed var(--rule); border-radius: 6px; padding: 12px; text-align: center; color: var(--ink-2); font-size: 13px; background: var(--panel-2); cursor: pointer; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop strong { color: var(--accent); }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.datainfo { font: 12px var(--mono); color: var(--ink-2); }
+.datainfo.err { color: var(--fit); }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { font: 500 12.5px var(--sans); padding: 7px 4px; background: var(--panel-2); color: var(--ink-2); border: 0; border-left: 1px solid var(--rule); cursor: pointer; }
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
+.hint { font-size: 12px; color: var(--ink-3); margin: 0; }
+button.btn { font: 500 13px var(--sans); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel-2); color: var(--ink); cursor: pointer; }
+button.btn:hover { border-color: var(--accent); }
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+button.link { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
+.results { display: grid; gap: 16px; min-width: 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 0; }
+.stat { padding: 10px 14px; border-left: 1px solid var(--rule); display: grid; gap: 2px; }
+.stat:first-child { border-left: 0; }
+.stat .k { font: 600 12px var(--cond); letter-spacing: 0.03em; color: var(--ink-3); }
+.stat .v { font: 500 16px var(--mono); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .stat { border-left: 0; border-top: 1px solid var(--rule); } .stat:first-child { border-top: 0; } }
+.warn { background: var(--warn-bg); color: var(--warn-ink); border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+.card { padding: 14px 16px 12px; display: grid; gap: 8px; min-width: 0; }
+.card-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 14px; }
+.card-h h2 { font-size: 12.5px; }
+.card-h .meta { font: 12px var(--mono); color: var(--ink-3); }
+.chart { width: 100%; position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font: 11px var(--mono); fill: var(--ink-3); }
+.chart .lab { font: 500 11.5px var(--sans); fill: var(--ink-2); }
+.readout { position: absolute; pointer-events: none; font: 11.5px var(--mono); background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 3px 6px; color: var(--ink); white-space: nowrap; transform: translate(-50%, -115%); }
+.two { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font: 12.5px var(--mono); font-variant-numeric: tabular-nums; }
+th { font: 600 11px var(--cond); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+td.note { text-align: left; color: var(--warn-ink); font: 12px var(--sans); white-space: normal; min-width: 14ch; }
+.swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+.exports { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toast { font-size: 12.5px; color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; margin-right: 6px; vertical-align: 3px; }
+.legend i.dot { width: 6px; height: 6px; border: 0; border-radius: 50%; vertical-align: 1px; }
+footer { color: var(--ink-3); font-size: 12px; max-width: 110ch; }
+footer p { margin: 4px 0; }
+details summary { cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
+details[open] summary { margin-bottom: 8px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (prefers-reduced-motion: no-preference) { .seg button, button.btn { transition: background .12s, border-color .12s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Relaxation ILT Bench <small>1D inverse Laplace</small></h1>
+    <p class="tag">Load a two-column x/y file. The distribution updates as soon as you change anything, and everything runs in your browser.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="panel controls" aria-label="Settings">
+      <section>
+        <h2>Data</h2>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept=".txt,.dat,.csv,.tsv,.int,.out,text/plain">
+          <strong>Choose a file</strong> or drop it here<br>
+          <span class="hint">two columns: x (time or b-value), y (signal)</span>
+        </label>
+        <details id="pasteBox">
+          <summary>Paste data instead</summary>
+          <textarea id="paste" spellcheck="false" placeholder="0.0004  0.998&#10;0.0008  0.991&#10;..."></textarea>
+        </details>
+        <div class="row2">
+          <label class="f">x column <input type="number" id="colX" min="1" value="1"></label>
+          <label class="f">y column <input type="number" id="colY" min="1" value="2"></label>
+        </div>
+        <div class="datainfo" id="dataInfo">No data loaded</div>
+        <p class="hint"><button class="link" id="loadExample" type="button">Load example data</button> (synthetic CPMG: T2 = 8 ms and 120 ms)</p>
+      </section>
+
+      <section>
+        <h2>Model</h2>
+        <label class="f">Kernel
+          <select id="kernel">
+            <option value="T2">T2 decay (CPMG): exp(−t/T)</option>
+            <option value="T1IR">T1 inversion recovery: 1 − 2·exp(−t/T)</option>
+            <option value="T1SR">T1 saturation recovery: 1 − exp(−t/T)</option>
+            <option value="D">Diffusion: exp(−b·D)</option>
+            <option value="GAUSS">Gaussian decay (T2g): exp(−t²/2T²)</option>
+          </select>
+        </label>
+        <div class="row2">
+          <label class="f">Fit from x ≥ <input type="text" id="xStart" placeholder="first"></label>
+          <label class="f">to x ≤ <input type="text" id="xEnd" placeholder="last"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="baseline"> Constant baseline (offset)</label>
+      </section>
+
+      <section>
+        <h2>Distribution grid</h2>
+        <div class="row3">
+          <label class="f"><span><span id="gridSym">T</span> min</span> <input type="text" id="Tmin" value="1e-4"></label>
+          <label class="f"><span><span class="gs">T</span> max</span> <input type="text" id="Tmax" value="10"></label>
+          <label class="f">points <input type="number" id="nT" min="10" max="400" value="120"></label>
+        </div>
+        <div class="row2">
+          <label class="f">Spacing
+            <select id="gridSpace"><option value="log">log</option><option value="linear">linear</option></select>
+          </label>
+          <label class="f">&nbsp;<button class="btn" type="button" id="autoGrid">Fit grid to data</button></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Method</h2>
+        <div class="seg" role="group" aria-label="Method">
+          <button type="button" data-method="brd" aria-pressed="true">Regularized</button>
+          <button type="button" data-method="nnls" aria-pressed="false">NNLS</button>
+          <button type="button" data-method="discrete" aria-pressed="false">Discrete</button>
+        </div>
+        <div id="optBrd" class="row2" style="gap:10px">
+          <label class="f" style="grid-column:1/-1">Choose α by
+            <select id="alphaMode">
+              <option value="brd">BRD (matches noise level)</option>
+              <option value="scurve">S-curve slope</option>
+              <option value="fixed">Fixed α</option>
+            </select>
+          </label>
+          <label class="f">α (initial / fixed) <input type="text" id="alpha" value="1"></label>
+          <label class="f">S-curve slope <input type="text" id="scurveTarget" value="0.1"></label>
+          <label class="f">Noise σ (0 = auto) <input type="text" id="sigma" value="0"></label>
+          <label class="f">SVD cutoff <input type="text" id="sfactor" value="1e-4"></label>
+        </div>
+        <p class="hint" id="optNnls" hidden>Non-negative least squares with no smoothing. Expect spiky, noise-sensitive distributions; useful as a check.</p>
+        <div id="optDiscrete" hidden>
+          <label class="f">Components <input type="number" id="ncomp" min="1" max="6" value="2"></label>
+          <p class="hint">Starting values come from the largest peaks of the regularized distribution.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Area bounds</h2>
+        <label class="f"><span>Split <span class="gs">T</span> at (space separated)</span>
+          <input type="text" id="bounds" placeholder="e.g. 0.03 0.5">
+        </label>
+        <p class="hint">Adds up the distribution between the cut points, like out2plot.py.</p>
+      </section>
+    </aside>
+
+    <main class="results" aria-live="polite">
+      <div class="panel stats" id="stats"></div>
+      <div class="warn" id="warn" hidden></div>
+
+      <div class="panel card">
+        <div class="card-h">
+          <h2 id="distTitle">T2 distribution</h2>
+          <span class="meta" id="distMeta"></span>
+        </div>
+        <div class="chart" id="distChart"></div>
+        <div class="tbl-wrap"><table id="peakTable"></table></div>
+      </div>
+
+      <div class="two">
+        <div class="panel card">
+          <div class="card-h">
+            <h2>Data and fit</h2>
+            <label class="check" style="font-size:12px"><input type="checkbox" id="fitLogX"> log x</label>
+          </div>
+          <div class="legend" id="fitLegend"></div>
+          <div class="chart" id="fitChart"></div>
+          <div class="chart" id="residChart"></div>
+        </div>
+        <div class="panel card" id="scurveCard">
+          <div class="card-h">
+            <h2>S-curve</h2>
+            <span class="meta">fit error vs. α</span>
+          </div>
+          <div class="chart" id="scurveChart"></div>
+          <p class="hint">Large α oversmooths (error rises). Small α overfits noise (error flat, distribution spiky). The dot marks the α in use.</p>
+        </div>
+      </div>
+
+      <div class="panel card">
+        <div class="card-h"><h2>Export</h2><span class="toast" id="toast" role="status"></span></div>
+        <div class="exports">
+          <button class="btn primary" type="button" id="copyDist">Copy distribution</button>
+          <button class="btn" type="button" id="copyFit">Copy fit and residuals</button>
+          <button class="btn" type="button" id="dlOut">Save .out file</button>
+          <button class="btn" type="button" id="dlDist">Save distribution .txt</button>
+        </div>
+        <p class="hint">Copied text is tab separated, ready to paste into Excel, Origin or Igor. The .out file follows the decay2distr.py layout, so out2plot.py can read it. Saving files works when you open index.html on your own computer; in the web preview, use Copy instead.</p>
+        <textarea id="exportFallback" hidden readonly spellcheck="false" style="min-height:140px"></textarea>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <p><strong>Method.</strong> Minimizes ‖Kf − y‖² + α‖f‖² with f ≥ 0. The kernel is compressed by SVD, the problem is solved in its dual with Newton's method, and α is set by the Butler–Reeds–Dawson rule (Venkataramanan, Song &amp; Hürlimann, IEEE Trans. Signal Process. 50, 1017, 2002; Butler, Reeds &amp; Dawson, SIAM J. Numer. Anal. 18, 381, 1981). This is the same approach osilap uses. The code here is an independent implementation, not osilap's.</p>
+    <p>Distribution values are amplitudes per grid point in the units of y, so Σf plus the baseline reproduces the signal. Changing the grid density changes the height of each point but not the peak areas.</p>
+  </footer>
+</div>
+
+<script src="ilt-core.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const state = { raw: null, name: 'example', method: 'brd', result: null, discrete: null, lastRun: 0 };
+
+  // ---------------- number formatting ----------------
+  const fmt = (v, p = 3) => {
+    if (v === 0) return '0';
+    if (!isFinite(v)) return '–';
+    const a = Math.abs(v);
+    return (a >= 1e4 || a < 1e-3) ? v.toExponential(p - 1).replace('e+', 'e') : (+v.toPrecision(p)).toString();
+  };
+  const num = (s, d) => { const v = parseFloat(String(s).trim()); return isFinite(v) ? v : d; };
+  const gridLabel = () => ({ T2: 'T2', T1IR: 'T1', T1SR: 'T1', D: 'D', GAUSS: 'T2g' })[$('kernel').value];
+  const xLabel = () => ($('kernel').value === 'D' ? 'b' : 't');
+
+  // ---------------- data parsing ----------------
+  function parseText(text) {
+    const cx = Math.max(1, parseInt($('colX').value) || 1) - 1, cy = Math.max(1, parseInt($('colY').value) || 2) - 1;
+    const xs = [], ys = [];
+    let skipped = 0;
+    for (const line of text.split(/\r?\n/)) {
+      const t = line.trim();
+      if (!t || /^[#%;!/]/.test(t)) continue;
+      const parts = t.split(/[\s,;]+/).filter(Boolean);
+      const x = Number(parts[cx]), y = Number(parts[cy]);
+      if (parts.length > Math.max(cx, cy) && isFinite(x) && isFinite(y)) { xs.push(x); ys.push(y); } else skipped++;
+    }
+    return { x: xs, y: ys, skipped };
+  }
+  function setData(text, name) {
+    state.text = text; state.name = name || 'data';
+    const d = parseText(text);
+    const info = $('dataInfo');
+    if (d.x.length < 3) {
+      state.raw = null;
+      info.className = 'datainfo err';
+      info.textContent = 'Found ' + d.x.length + ' numeric rows. Check the column numbers, or that values are separated by spaces, tabs or commas.';
+      render(); return;
+    }
+    // sort by x
+    const idx = d.x.map((_, i) => i).sort((a, b) => d.x[a] - d.x[b]);
+    state.raw = { x: idx.map(i => d.x[i]), y: idx.map(i => d.y[i]) };
+    info.className = 'datainfo';
+    info.textContent = state.name + ': ' + d.x.length + ' points, x ' + fmt(state.raw.x[0]) + ' to ' + fmt(state.raw.x[state.raw.x.length - 1]) + (d.skipped ? ' (' + d.skipped + ' header/text lines skipped)' : '');
+    autoGrid();
+    schedule();
+  }
+  function autoGrid() {
+    if (!state.raw) return;
+    const xs = state.raw.x.filter(v => v > 0);
+    if (!xs.length) return;
+    const lo = xs[0], hi = xs[xs.length - 1];
+    let a, b;
+    // components much faster than the first point (or slower than ~3x the last) are not determined by the data
+    if ($('kernel').value === 'D') { a = 0.3 / hi; b = 3 / lo; }
+    else { a = lo; b = hi * 3; }
+    const nice = (v, up) => { const e = Math.floor(Math.log10(v)), m = v / Math.pow(10, e); const steps = [1, 2, 5, 10]; const k = up ? steps.find(s => s >= m - 1e-9) : steps.slice().reverse().find(s => s <= m + 1e-9); return k * Math.pow(10, e); };
+    $('Tmin').value = fmt(nice(a, true), 2);
+    $('Tmax').value = fmt(nice(b, true), 2);
+  }
+  function exampleData() {
+    let seed = 20140501;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const randn = () => Math.sqrt(-2 * Math.log(rnd())) * Math.cos(2 * Math.PI * rnd());
+    const lines = ['# synthetic CPMG echo train: 35% T2 = 8 ms, 65% T2 = 120 ms, 0.8% noise', '# time/s   intensity'];
+    for (let i = 1; i <= 1000; i++) {
+      const t = 0.0004 * i;
+      const y = 1000 * (0.35 * Math.exp(-t / 0.008) + 0.65 * Math.exp(-t / 0.12)) + 8 * randn();
+      lines.push(t.toFixed(4) + '\t' + y.toFixed(3));
+    }
+    return lines.join('\n');
+  }
+
+  // ---------------- run ----------------
+  let timer = 0;
+  function schedule() { clearTimeout(timer); timer = setTimeout(run, 120); }
+
+  function windowed() {
+    const r = state.raw, s = num($('xStart').value, -Infinity), e = num($('xEnd').value, Infinity);
+    const x = [], y = [];
+    r.x.forEach((v, i) => { if (v >= s && v <= e) { x.push(v); y.push(r.y[i]); } });
+    return { x, y };
+  }
+
+  function run() {
+    state.result = null; state.discrete = null; state.error = '';
+    if (!state.raw) { render(); return; }
+    try {
+      const { x, y } = windowed();
+      if (x.length < 3) throw new Error('Fewer than 3 points fall inside the fit range.');
+      let Tmin = num($('Tmin').value, 1e-4), Tmax = num($('Tmax').value, 10);
+      if (!(Tmin > 0) || !(Tmax > Tmin)) throw new Error('Grid needs 0 < min < max.');
+      const nT = Math.min(400, Math.max(10, parseInt($('nT').value) || 120));
+      const method = state.method;
+      const opts = {
+        kernel: $('kernel').value, Tmin, Tmax, nT, gridSpace: $('gridSpace').value,
+        mode: method === 'nnls' ? 'nnls' : $('alphaMode').value,
+        alpha: num($('alpha').value, 1), sigma: num($('sigma').value, 0), sfactor: num($('sfactor').value, 1e-4),
+        scurveTarget: num($('scurveTarget').value, 0.1), baseline: $('baseline').checked,
+      };
+      const t0 = performance.now();
+      state.result = ILT.invert(x, y, opts);
+      if (method === 'discrete') {
+        const nc = Math.min(6, Math.max(1, parseInt($('ncomp').value) || 2));
+        const pk = state.result.peaks.slice().sort((a, b) => b.fraction - a.fraction).slice(0, nc).map(p => p.Tmean);
+        // fewer peaks than components: add starting values spread over the grid
+        const lo = Math.log(Tmin), hi = Math.log(Tmax);
+        for (let k = 1; pk.length < nc; k++) pk.push(Math.exp(lo + (hi - lo) * k / (nc + 1)));
+        state.discrete = ILT.discreteFit(x, y, opts.kernel, pk.sort((a, b) => a - b), opts.baseline);
+      }
+      state.ms = performance.now() - t0;
+      state.fitX = x; state.fitY = y;
+    } catch (e) {
+      state.error = e.message || String(e);
+    }
+    render();
+  }
+
+  // ---------------- SVG plotting ----------------
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+  function niceTicks(a, b, n) {
+    const span = b - a; if (!(span > 0)) return [a];
+    const step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0))), r = step0 / mag;
+    const step = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+    const out = []; for (let v = Math.ceil(a / step) * step; v <= b + step * 1e-9; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
+    return out;
+  }
+  function logTicks(a, b) {
+    const out = [], la = Math.floor(Math.log10(a)), lb = Math.ceil(Math.log10(b));
+    const every = Math.max(1, Math.ceil((lb - la) / 7));
+    for (let e = la; e <= lb; e++) { const v = Math.pow(10, e); if (v >= a * 0.999 && v <= b * 1.001 && (e - la) % every === 0) out.push(v); }
+    return out;
+  }
+  const expLabel = v => { const e = Math.round(Math.log10(v)); return (e >= -2 && e <= 3) ? String(+v.toPrecision(3)) : '1e' + e; };
+
+  // opts: {w,h, xlog, ylog, xmin,xmax,ymin,ymax, xlabel, ylabel, series:[{x,y,kind:'line'|'area'|'dots', color, width, r}], vlines:[{x,color,dash}], hlines, marker:{x,y,color}, hover}
+  function plot(container, o) {
+    container.innerHTML = '';
+    const W = o.w || 720, H = o.h || 300, m = { l: 54, r: 14, t: 10, b: o.xlabel ? 38 : 22 };
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': o.aria || '' }, container);
+    const X = v => o.xlog ? Math.log10(v) : v, Y = v => o.ylog ? Math.log10(v) : v;
+    const x0 = X(o.xmin), x1 = X(o.xmax), y0 = Y(o.ymin), y1 = Y(o.ymax);
+    const sx = v => m.l + (X(v) - x0) / (x1 - x0 || 1) * (W - m.l - m.r);
+    const sy = v => H - m.b - (Y(v) - y0) / (y1 - y0 || 1) * (H - m.t - m.b);
+    const css = getComputedStyle(document.documentElement);
+    const grid = css.getPropertyValue('--grid').trim(), rule = css.getPropertyValue('--rule').trim();
+    const xt = o.xlog ? logTicks(o.xmin, o.xmax) : niceTicks(o.xmin, o.xmax, 6);
+    const yt = o.ylog ? logTicks(o.ymin, o.ymax) : niceTicks(o.ymin, o.ymax, o.yticks || 4);
+    xt.forEach(v => { const px = sx(v); el('line', { x1: px, x2: px, y1: m.t, y2: H - m.b, stroke: grid, 'stroke-width': 1 }, svg); const t = el('text', { x: px, y: H - m.b + 15, 'text-anchor': 'middle' }, svg); t.textContent = o.xlog ? expLabel(v) : fmt(v, 3); });
+    yt.forEach(v => { const py = sy(v); el('line', { x1: m.l, x2: W - m.r, y1: py, y2: py, stroke: grid, 'stroke-width': 1 }, svg); const t = el('text', { x: m.l - 6, y: py + 4, 'text-anchor': 'end' }, svg); t.textContent = o.ylog ? expLabel(v) : fmt(v, 3); });
+    if (o.xlog) { // minor ticks
+      for (let e = Math.floor(Math.log10(o.xmin)); e <= Math.ceil(Math.log10(o.xmax)); e++) for (let k = 2; k < 10; k++) { const v = k * Math.pow(10, e); if (v > o.xmin && v < o.xmax) el('line', { x1: sx(v), x2: sx(v), y1: H - m.b, y2: H - m.b + 3, stroke: rule }, svg); }
+    }
+    el('line', { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: rule }, svg);
+    if (o.xlabel) { const t = el('text', { x: (m.l + W - m.r) / 2, y: H - 4, 'text-anchor': 'middle', class: 'lab' }, svg); t.textContent = o.xlabel; }
+    if (o.ylabel) { const t = el('text', { x: 12, y: (m.t + H - m.b) / 2, 'text-anchor': 'middle', class: 'lab', transform: `rotate(-90 12 ${(m.t + H - m.b) / 2})` }, svg); t.textContent = o.ylabel; }
+    const clipId = 'c' + Math.random().toString(36).slice(2);
+    const cp = el('clipPath', { id: clipId }, el('defs', {}, svg)); el('rect', { x: m.l, y: m.t - 2, width: W - m.l - m.r, height: H - m.t - m.b + 4 }, cp);
+    const g = el('g', { 'clip-path': `url(#${clipId})` }, svg);
+    (o.hlines || []).forEach(h => el('line', { x1: m.l, x2: W - m.r, y1: sy(h.y), y2: sy(h.y), stroke: h.color, 'stroke-dasharray': h.dash || '', 'stroke-width': 1 }, g));
+    (o.vlines || []).forEach(v => el('line', { x1: sx(v.x), x2: sx(v.x), y1: m.t, y2: H - m.b, stroke: v.color, 'stroke-dasharray': v.dash || '4 3', 'stroke-width': 1.2 }, g));
+    for (const s of o.series) {
+      const pts = [];
+      for (let i = 0; i < s.x.length; i++) { const xv = s.x[i], yv = s.y[i]; if ((o.xlog && !(xv > 0)) || (o.ylog && !(yv > 0)) || !isFinite(yv)) continue; pts.push([sx(xv), sy(yv)]); }
+      if (!pts.length) continue;
+      if (s.kind === 'dots') {
+        const step = Math.max(1, Math.floor(pts.length / 700));
+        let d = ''; const r = s.r || 1.8;
+        for (let i = 0; i < pts.length; i += step) d += `M${pts[i][0] - r},${pts[i][1]}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0`;
+        el('path', { d, fill: s.color, 'fill-opacity': s.opacity || 0.75 }, g);
+      } else {
+        const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('');
+        if (s.kind === 'area') el('path', { d: d + `L${pts[pts.length - 1][0]},${sy(o.ylog ? o.ymin : Math.max(0, o.ymin))}L${pts[0][0]},${sy(o.ylog ? o.ymin : Math.max(0, o.ymin))}Z`, fill: s.fill, stroke: 'none' }, g);
+        el('path', { d, fill: 'none', stroke: s.color, 'stroke-width': s.width || 1.8, 'stroke-linejoin': 'round', 'stroke-dasharray': s.dash || '' }, g);
+      }
+    }
+    (o.markers || []).forEach(mk => el('circle', { cx: sx(mk.x), cy: sy(mk.y), r: mk.r || 4, fill: mk.color, stroke: css.getPropertyValue('--panel').trim(), 'stroke-width': 1.5 }, svg));
+    if (o.hover) {
+      const ro = document.createElement('div'); ro.className = 'readout'; ro.hidden = true; container.appendChild(ro);
+      const cross = el('line', { y1: m.t, y2: H - m.b, stroke: rule, 'stroke-width': 1, visibility: 'hidden' }, svg);
+      const hit = el('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }, svg);
+      const move = ev => {
+        const b = svg.getBoundingClientRect(), px = (ev.clientX - b.left) / b.width * W;
+        const xv = o.xlog ? Math.pow(10, x0 + (px - m.l) / (W - m.l - m.r) * (x1 - x0)) : x0 + (px - m.l) / (W - m.l - m.r) * (x1 - x0);
+        const res = o.hover(xv); if (!res) return;
+        cross.setAttribute('x1', sx(res.x)); cross.setAttribute('x2', sx(res.x)); cross.setAttribute('visibility', 'visible');
+        ro.hidden = false; ro.textContent = res.text;
+        ro.style.left = (sx(res.x) / W * b.width) + 'px'; ro.style.top = (sy(res.y) / H * b.height) + 'px';
+      };
+      hit.addEventListener('pointermove', move);
+      hit.addEventListener('pointerleave', () => { ro.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+    }
+    return { sx, sy };
+  }
+  const extent = arrs => { let lo = Infinity, hi = -Infinity; for (const a of arrs) for (const v of a) if (isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } return [lo, hi]; };
+  const pad = ([lo, hi], f = 0.06) => { const d = (hi - lo) || Math.abs(hi) || 1; return [lo - d * f, hi + d * f]; };
+
+  // ---------------- render ----------------
+  const PEAK_COLORS = ['#0e6b66', '#c2410c', '#6d4bb5', '#1d6fb8', '#8a6d00', '#b0306b'];
+  function cssv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+  function render() {
+    const R = state.result, D = state.discrete, lab = gridLabel();
+    document.querySelectorAll('.gs').forEach(e => { e.textContent = lab === 'D' ? 'D' : 'T'; });
+    $('gridSym').textContent = lab === 'D' ? 'D' : 'T';
+    const methodName = state.method === 'nnls' ? 'NNLS' : state.method === 'discrete' ? 'Discrete fit' : 'Regularized (' + ({ brd: 'BRD', scurve: 'S-curve', fixed: 'fixed α' })[$('alphaMode').value] + ')';
+    $('distTitle').textContent = lab + ' distribution';
+    const warn = $('warn');
+    if (state.error || (R && R.warning)) { warn.hidden = false; warn.textContent = state.error || R.warning; } else warn.hidden = true;
+    if (!R) {
+      $('stats').innerHTML = '<div class="stat"><span class="k">Status</span><span class="v" style="font-size:14px">' + (state.raw ? 'Check the settings' : 'Load data to begin') + '</span></div>';
+      ['distChart', 'fitChart', 'residChart', 'scurveChart', 'peakTable', 'fitLegend'].forEach(id => { $(id).innerHTML = ''; });
+      $('distMeta').textContent = '';
+      return;
+    }
+    const fitArr = D ? D.fit : R.fit, base = D ? D.baseline : R.baseline;
+    const resid = state.fitY.map((v, i) => v - fitArr[i]);
+    const rms = Math.sqrt(resid.reduce((a, v) => a + v * v, 0) / resid.length);
+    const statItems = [
+      ['Method', methodName.replace('Regularized ', 'Reg. ')],
+      ['α', state.method === 'brd' ? fmt(R.alpha) : '–'],
+      ['Noise σ', fmt(R.sigma)],
+      ['Fit RMS', fmt(rms)],
+      ['χ²/N (σ)', fmt((rms * rms) / (R.sigma * R.sigma), 3)],
+      ['SNR', fmt(R.snr, 3)],
+      ['Mean ' + lab, D ? '–' : fmt(R.meanT)],
+      ['Baseline', $('baseline').checked ? fmt(base) : 'off'],
+      ['Time', (state.ms < 1000 ? Math.round(state.ms) + ' ms' : (state.ms / 1000).toFixed(1) + ' s')],
+    ];
+    $('stats').innerHTML = statItems.map(([k, v]) => `<div class="stat"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+
+    // distribution chart
+    const logG = $('gridSpace').value === 'log';
+    const T = Array.from(R.T), f = Array.from(R.f);
+    const bounds = $('bounds').value.split(/[\s,;]+/).map(Number).filter(v => isFinite(v) && v > 0).sort((a, b) => a - b);
+    const ymaxD = Math.max(...f, 1e-300);
+    const series = [];
+    if (state.method !== 'discrete') series.push({ x: T, y: f, kind: 'area', color: cssv('--accent'), fill: cssv('--accent-soft'), width: 2 });
+    else series.push({ x: T, y: f, kind: 'line', color: cssv('--ink-3'), width: 1.2, dash: '3 3' });
+    const markers = [];
+    let ymaxPlot = ymaxD;
+    if (D) {
+      // show discrete components as sticks scaled to the regularized curve height
+      const Amax = Math.max(...D.comps.map(c => c.A));
+      D.comps.forEach((c, i) => {
+        const h = ymaxD * c.A / Amax;
+        series.push({ x: [c.T, c.T], y: [0, h], kind: 'line', color: PEAK_COLORS[i % 6], width: 3 });
+        markers.push({ x: c.T, y: h, color: PEAK_COLORS[i % 6] });
+      });
+    } else {
+      R.peaks.filter(p => p.fraction >= 0.005).forEach((p, i) => markers.push({ x: p.Tpeak, y: f[p.index], color: PEAK_COLORS[i % 6], r: 3.5 }));
+    }
+    plot($('distChart'), {
+      w: 820, h: 280, xlog: logG, xmin: T[0], xmax: T[T.length - 1], ymin: 0, ymax: ymaxPlot * 1.1,
+      xlabel: lab + (lab === 'D' ? ' (1 / x units)' : ' (x units)'), ylabel: 'amplitude', series, markers,
+      vlines: bounds.map(b => ({ x: b, color: cssv('--fit'), dash: '5 4' })), aria: lab + ' distribution',
+      hover: xv => { let j = 0, best = Infinity; T.forEach((t, i) => { const d = Math.abs(logG ? Math.log(t / xv) : t - xv); if (d < best) { best = d; j = i; } }); return { x: T[j], y: f[j], text: lab + ' ' + fmt(T[j]) + '  ·  ' + fmt(f[j]) }; },
+    });
+    $('distMeta').textContent = T.length + ' pts · ' + (state.method === 'nnls' ? 'no smoothing' : state.method === 'discrete' ? 'dashed: regularized reference' : 'rank ' + R.rank);
+
+    // peak / component table
+    let html = '';
+    if (D) {
+      html = `<thead><tr><th>Component</th><th>${lab}</th><th>± ${lab}</th><th>Amplitude</th><th>± amp.</th><th>Fraction</th></tr></thead><tbody>` +
+        D.comps.map((c, i) => `<tr><td><span class="swatch" style="background:${PEAK_COLORS[i % 6]}"></span>${i + 1}</td><td>${fmt(c.T, 4)}</td><td>${fmt(c.Terr, 2)}</td><td>${fmt(c.A, 4)}</td><td>${fmt(c.Aerr, 2)}</td><td>${(c.fraction * 100).toFixed(1)}%</td></tr>`).join('') +
+        ($('baseline').checked ? `<tr><td>baseline</td><td></td><td></td><td>${fmt(D.baseline, 4)}</td><td>${fmt(D.baselineErr, 2)}</td><td></td></tr>` : '') + '</tbody>';
+    } else {
+      const pk = R.peaks.filter(p => p.fraction >= 0.005);
+      html = `<thead><tr><th>Peak</th><th>${lab} at max</th><th>${lab} mean (log)</th><th>Range</th><th>Area</th><th>Fraction</th><th>Note</th></tr></thead><tbody>` +
+        pk.map((p, i) => `<tr><td><span class="swatch" style="background:${PEAK_COLORS[i % 6]}"></span>${i + 1}</td><td>${fmt(p.Tpeak)}</td><td>${fmt(p.Tmean)}</td><td>${fmt(p.from, 2)} – ${fmt(p.to, 2)}</td><td>${fmt(p.amplitude, 4)}</td><td>${(p.fraction * 100).toFixed(1)}%</td><td class="note">${p.index <= 1 || p.index >= T.length - 2 ? 'at grid edge, likely noise or out of range' : ''}</td></tr>`).join('') +
+        `<tr><td>total</td><td></td><td>${fmt(R.meanT)}</td><td></td><td>${fmt(R.total, 4)}</td><td>100%</td><td></td></tr></tbody>`;
+    }
+    if (bounds.length) {
+      const edges = [-Infinity, ...bounds, Infinity];
+      const tot = f.reduce((a, b) => a + b, 0);
+      html += `<thead><tr><th>Region</th><th>from</th><th>to</th><th></th><th>Area</th><th>Fraction</th><th></th></tr></thead><tbody>` +
+        edges.slice(0, -1).map((lo, k) => { const hi = edges[k + 1]; let a = 0; T.forEach((t, i) => { if (t >= lo && t < hi) a += f[i]; }); return `<tr><td>${k + 1}</td><td>${isFinite(lo) ? fmt(lo) : '–'}</td><td>${isFinite(hi) ? fmt(hi) : '–'}</td><td></td><td>${fmt(a, 4)}</td><td>${tot > 0 ? (a / tot * 100).toFixed(1) : 0}%</td><td></td></tr>`; }).join('') + '</tbody>';
+    }
+    $('peakTable').innerHTML = html;
+
+    // fit chart
+    const logX = $('fitLogX').checked;
+    const xsAll = state.raw.x, ysAll = state.raw.y, xf = state.fitX;
+    const inRange = new Set(xf);
+    const outX = [], outY = [];
+    xsAll.forEach((v, i) => { if (!inRange.has(v)) { outX.push(v); outY.push(ysAll[i]); } });
+    const fitSeries = [
+      { x: xf, y: state.fitY, kind: 'dots', color: cssv('--dots') },
+      { x: outX, y: outY, kind: 'dots', color: cssv('--ink-3'), opacity: 0.3 },
+      { x: xf, y: Array.from(fitArr), kind: 'line', color: cssv('--fit'), width: 2 },
+    ];
+    let legend = `<span><i class="dot" style="background:${cssv('--dots')}"></i>data</span><span><i style="border-color:${cssv('--fit')}"></i>fit</span>`;
+    if (D) D.partials.forEach((p, i) => { fitSeries.push({ x: xf, y: Array.from(p), kind: 'line', color: PEAK_COLORS[i % 6], width: 1.2, dash: '4 3' }); legend += `<span><i style="border-color:${PEAK_COLORS[i % 6]};border-top-style:dashed"></i>${lab} = ${fmt(D.comps[i].T)}</span>`; });
+    if (outX.length) legend += `<span><i class="dot" style="background:${cssv('--ink-3')};opacity:.4"></i>outside fit range</span>`;
+    $('fitLegend').innerHTML = legend;
+    const xPos = xsAll.filter(v => v > 0);
+    const xr = logX ? [xPos[0], xPos[xPos.length - 1]] : pad(extent([xsAll]), 0.01);
+    const yr = pad(extent([ysAll, fitArr]));
+    plot($('fitChart'), {
+      w: 560, h: 250, xlog: logX, xmin: xr[0], xmax: xr[1], ymin: yr[0], ymax: yr[1], ylabel: 'signal', series: fitSeries,
+      hlines: $('baseline').checked ? [{ y: base, color: cssv('--ink-3'), dash: '2 3' }] : [], aria: 'data and fit',
+    });
+    const rr = extent([resid]); const ra = Math.max(Math.abs(rr[0]), Math.abs(rr[1]), 1e-300) * 1.1;
+    plot($('residChart'), {
+      w: 560, h: 120, xlog: logX, xmin: xr[0], xmax: xr[1], ymin: -ra, ymax: ra, yticks: 2, xlabel: xLabel() + ' (x units)', ylabel: 'residual',
+      series: [{ x: xf, y: resid, kind: 'dots', color: cssv('--fit'), r: 1.5, opacity: 0.7 }],
+      hlines: [{ y: 0, color: cssv('--ink-3') }, { y: R.sigma, color: cssv('--rule'), dash: '3 3' }, { y: -R.sigma, color: cssv('--rule'), dash: '3 3' }], aria: 'residuals',
+    });
+
+    // s-curve
+    const sc = R.scurve;
+    $('scurveCard').hidden = !sc.length;
+    if (sc.length) {
+      const ax = sc.map(p => p.alpha), ch = sc.map(p => p.chi);
+      const [clo, chi] = extent([ch]);
+      const mk = [];
+      if (state.method !== 'nnls' && R.alpha > 0) {
+        // interpolate chi at the chosen alpha
+        let cy = ch[ch.length - 1];
+        for (let i = 0; i < sc.length - 1; i++) if (R.alpha <= ax[i] && R.alpha >= ax[i + 1]) { const w = Math.log(R.alpha / ax[i + 1]) / Math.log(ax[i] / ax[i + 1]); cy = Math.exp(Math.log(ch[i + 1]) + w * Math.log(ch[i] / ch[i + 1])); }
+        mk.push({ x: Math.min(Math.max(R.alpha, ax[ax.length - 1]), ax[0]), y: cy, color: cssv('--accent'), r: 5 });
+      }
+      plot($('scurveChart'), {
+        w: 440, h: 250, xlog: true, ylog: true, xmin: ax[ax.length - 1], xmax: ax[0], ymin: clo / 1.3, ymax: chi * 1.3,
+        xlabel: 'α', ylabel: 'RMS error', series: [{ x: ax, y: ch, kind: 'line', color: cssv('--ink-2'), width: 1.6 }], markers: mk,
+        hlines: [{ y: R.sigma, color: cssv('--fit'), dash: '4 3' }], aria: 'S-curve',
+      });
+    }
+  }
+
+  // ---------------- exports ----------------
+  const pad15 = v => (typeof v === 'number' ? v.toExponential(6) : String(v)).padStart(15);
+  function distText() {
+    const R = state.result, lab = gridLabel();
+    let s = lab + '\tamplitude\n';
+    R.T.forEach((t, i) => { s += t.toExponential(6) + '\t' + R.f[i].toExponential(6) + '\n'; });
+    return s;
+  }
+  function fitText() {
+    const R = state.result, D = state.discrete, fit = D ? D.fit : R.fit;
+    let s = xLabel() + '\tdata\tfit\tresidual\n';
+    state.fitX.forEach((x, i) => { s += x + '\t' + state.fitY[i] + '\t' + fit[i].toExponential(6) + '\t' + (state.fitY[i] - fit[i]).toExponential(6) + '\n'; });
+    return s;
+  }
+  function outText() { // decay2distr.py-compatible .out layout
+    const R = state.result, D = state.discrete, kug = '-'.repeat(72) + '\n', raw = state.raw;
+    const tag = state.method === 'nnls' ? 'NNLS' : 'BRD';
+    let s = kug + 'General information\n' + kug;
+    s += 'Input file: ' + state.name + '\nOutput file: ' + state.name.replace(/\.[^.]*$/, '') + '.out\nSelected analyzing methods: [' + tag.toLowerCase() + ']\n';
+    s += 'Exp. x range: ' + raw.x[0] + '-' + raw.x[raw.x.length - 1] + '\nExp.  points: ' + raw.x.length + '\n';
+    s += 'Fitting x range: ' + state.fitX[0] + '-' + state.fitX[state.fitX.length - 1] + '\nFitting  points: ' + state.fitX.length + '\n';
+    s += 'Grid points: ' + R.T.length + '\nGrid spaces: ' + $('gridSpace').value + '\n';
+    s += '\n# Decay data (EXPERIMENTAL)\n' + pad15('time') + pad15('intensity') + '\n';
+    raw.x.forEach((x, i) => { s += pad15(x) + pad15(raw.y[i]) + '\n'; });
+    s += '\n';
+    const chi = R.fit.reduce((a, v, i) => a + (state.fitY[i] - v) ** 2, 0) / state.fitX.length;
+    s += kug + tag + ' analysis\n' + kug + 'baseline = ' + R.baseline + '\nalpha: ' + R.alpha + '\n||Ical-Iexp||/N: ' + chi + '\n';
+    s += '\n# Decay data (' + tag + ')\n' + pad15('time') + pad15('exp.') + pad15('cal.') + pad15('diff.') + '\n';
+    state.fitX.forEach((x, i) => { s += pad15(x) + pad15(state.fitY[i]) + pad15(R.fit[i]) + pad15(state.fitY[i] - R.fit[i]) + '\n'; });
+    s += '\n# Distribution data (' + tag + ')\n' + pad15('w') + pad15('intensity') + '\n';
+    R.T.forEach((t, i) => { s += pad15(t) + pad15(R.f[i]) + '\n'; });
+    s += '\n';
+    if (D) {
+      s += kug + 'Discrete analysis\n' + kug + D.comps.length + ' components anaysis\n';
+      D.comps.forEach((c, i) => { s += '### ' + (i + 1) + ' component: population (' + (c.fraction * 100).toPrecision(6) + '%)\nT: ' + c.T + ' +/- ' + c.Terr + '\nM: ' + c.A + ' +/- ' + c.Aerr + '\n'; });
+      s += '\n';
+    }
+    return s;
+  }
+  function toast(msg) { $('toast').textContent = msg; clearTimeout(toast.t); toast.t = setTimeout(() => { $('toast').textContent = ''; }, 2500); }
+  function copy(text, what) {
+    if (!state.result) { toast('Load data first'); return; }
+    const fb = $('exportFallback');
+    const fallback = () => { fb.hidden = false; fb.value = text; fb.focus(); fb.select(); toast('Copy blocked here. Text is selected below; press Ctrl/Cmd+C.'); };
+    try { navigator.clipboard.writeText(text).then(() => { fb.hidden = true; toast(what + ' copied'); }, fallback); } catch (e) { fallback(); }
+  }
+  function save(text, filename) {
+    if (!state.result) { toast('Load data first'); return; }
+    try {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+      a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      toast('Saving ' + filename + '. If nothing downloads, use Copy.');
+    } catch (e) { copy(text, filename); }
+  }
+  const baseName = () => state.name.replace(/\.[^.]*$/, '') || 'data';
+
+  // ---------------- wiring ----------------
+  const file = $('file'), drop = $('drop');
+  const readFile = fl => { if (!fl) return; const r = new FileReader(); r.onload = () => { $('paste').value = ''; setData(String(r.result), fl.name); }; r.readAsText(fl); };
+  file.addEventListener('change', () => readFile(file.files[0]));
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => readFile(e.dataTransfer.files[0]));
+  $('paste').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => setData($('paste').value, 'pasted data'), 300); });
+  ['colX', 'colY'].forEach(id => $(id).addEventListener('change', () => { if (state.text) setData(state.text, state.name); }));
+  $('loadExample').addEventListener('click', () => { $('kernel').value = 'T2'; setData(exampleData(), 'example_cpmg.int'); });
+  $('autoGrid').addEventListener('click', () => { autoGrid(); schedule(); });
+  $('kernel').addEventListener('change', () => { autoGrid(); schedule(); });
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    state.method = b.dataset.method;
+    document.querySelectorAll('.seg button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+    $('optBrd').hidden = state.method === 'nnls';
+    $('optNnls').hidden = state.method !== 'nnls';
+    $('optDiscrete').hidden = state.method !== 'discrete';
+    schedule();
+  }));
+  ['xStart', 'xEnd', 'baseline', 'Tmin', 'Tmax', 'nT', 'gridSpace', 'alphaMode', 'alpha', 'scurveTarget', 'sigma', 'sfactor', 'ncomp', 'bounds'].forEach(id => {
+    $(id).addEventListener('input', schedule); $(id).addEventListener('change', schedule);
+  });
+  $('fitLogX').addEventListener('change', render);
+  $('copyDist').addEventListener('click', () => copy(distText(), 'Distribution'));
+  $('copyFit').addEventListener('click', () => copy(fitText(), 'Fit table'));
+  $('dlOut').addEventListener('click', () => save(outText(), baseName() + '.out'));
+  $('dlDist').addEventListener('click', () => save(distText(), baseName() + '_distr.txt'));
+  try { const mq = matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener('change', render); new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) {}
+  let rz = 0; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+
+  // open in a working state with the example loaded
+  setData(exampleData(), 'example_cpmg.int');
+})();
+</script>
