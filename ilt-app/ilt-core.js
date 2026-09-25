@@ -34,30 +34,47 @@
   }
   const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
 
-  // Householder QR of an m x n matrix given as n columns. Returns R (n x n, columns) and Q'y.
-  function qrWithRhs(cols, y) {
+  // Column-pivoted Householder QR of an m x n matrix (given as n columns), stopped early once the
+  // remaining columns are negligible (norm < tolRel * largest). Returns the k x n factor R (columns kept
+  // in their original order, so K ~= Q_k R) and Q_k' y.
+  function qrWithRhs(cols, y, tolRel) {
     const n = cols.length, m = y.length, A = cols.map(c => Float64Array.from(c)), b = Float64Array.from(y);
-    const k = Math.min(m, n);
-    for (let j = 0; j < k; j++) {
-      const a = A[j];
+    const kmax = Math.min(m, n), done = new Uint8Array(n);
+    const norms = A.map(c => dot(c, c));
+    let first = 0, k = 0;
+    const v = new Float64Array(m);
+    for (; k < kmax; k++) {
+      // pivot: remaining column with the largest norm below row k
+      let p = -1, best = -1;
+      for (let j = 0; j < n; j++) if (!done[j] && norms[j] > best) { best = norms[j]; p = j; }
+      if (p < 0) break;
+      if (k === 0) first = best;
+      if (best <= 0 || best < tolRel * tolRel * first) break;
+      done[p] = 1;
+      const a = A[p];
       let norm = 0;
-      for (let i = j; i < m; i++) norm += a[i] * a[i];
+      for (let i = k; i < m; i++) norm += a[i] * a[i];
       norm = Math.sqrt(norm);
-      if (norm === 0) continue;
-      const alpha = a[j] > 0 ? -norm : norm;
-      const v = new Float64Array(m - j);
-      v[0] = a[j] - alpha;
-      for (let i = j + 1; i < m; i++) v[i - j] = a[i];
-      const vv = dot(v, v);
+      const alpha = a[k] > 0 ? -norm : norm;
+      v[k] = a[k] - alpha;
+      for (let i = k + 1; i < m; i++) v[i] = a[i];
+      let vv = 0;
+      for (let i = k; i < m; i++) vv += v[i] * v[i];
       if (vv === 0) continue;
       const apply = x => {
         let s = 0;
-        for (let i = j; i < m; i++) s += v[i - j] * x[i];
+        for (let i = k; i < m; i++) s += v[i] * x[i];
         s = 2 * s / vv;
-        for (let i = j; i < m; i++) x[i] -= s * v[i - j];
+        for (let i = k; i < m; i++) x[i] -= s * v[i];
       };
-      for (let jj = j; jj < n; jj++) apply(A[jj]);
+      for (let j = 0; j < n; j++) {
+        if (j !== p && done[j]) continue; // finished columns are zero below their row already
+        apply(A[j]);
+        if (!done[j]) norms[j] -= A[j][k] * A[j][k];
+      }
       apply(b);
+      // recompute norms occasionally to avoid cancellation
+      if (k % 16 === 15) for (let j = 0; j < n; j++) if (!done[j]) { let s2 = 0; const c = A[j]; for (let i = k + 1; i < m; i++) s2 += c[i] * c[i]; norms[j] = s2; }
     }
     const R = A.map(c => Float64Array.from(c.subarray(0, k)));
     return { R, qty: b.subarray(0, k) };
@@ -156,7 +173,7 @@
   }
 
   function compress(K, y, sfactor) {
-    const { R, qty } = qrWithRhs(K, y);
+    const { R, qty } = qrWithRhs(K, y, Math.max(sfactor * 1e-3, 1e-15));
     const k = qty.length, n0 = R.length;
     let svd;
     if (k < n0) { // fewer data points than grid points: decompose R' (k columns) instead
@@ -323,8 +340,8 @@
    */
   function invert(x, yRaw, opts) {
     const t0 = (typeof performance !== 'undefined' ? performance : Date).now();
-    const o = Object.assign({ kernel: 'T2', Tmin: 1e-4, Tmax: 10, nT: 100, gridSpace: 'log', mode: 'brd', alpha: 1,
-      sigma: 0, sfactor: 1e-4, baseline: false, scurveTarget: 0.1, alphaTol: 1e-4, alphaMax: 5000, nScurve: 41 }, opts || {});
+    const o = Object.assign({ kernel: 'T2', Tmin: 1e-4, Tmax: 10, nT: 400, gridSpace: 'log', mode: 'brd', alpha: 1,
+      sigma: 0, sfactor: 1e-8, baseline: false, scurveTarget: 0.1, alphaTol: 1e-4, alphaMax: 5000, nScurve: 41 }, opts || {});
     const m = x.length;
     if (m < 3 || yRaw.length !== m) throw new Error('Need at least 3 (x, y) points.');
     const kern = KERNELS[o.kernel];
@@ -397,9 +414,22 @@
         if (alpha < alphaFloor) break;
       }
       if (!converged || alpha < alphaFloor) {
-        warning = 'BRD could not reach the noise level (' + (sigma * scale).toPrecision(3) +
-          '). Used the S-curve alpha instead. Try setting the noise sigma by hand.';
-        alpha = alphaS; c = null; converged = false;
+        // The compressed residual cannot reach sqrt(r)*sigma even at tiny alpha. Add that floor to the
+        // target (target^2 = r sigma^2 + floor^2) so the BRD iteration has a reachable fixed point.
+        const solF = solveFixedAlpha(Km, mt, alphaFloor, null);
+        const res = mt.map((v, i) => { let q = 0; const row = Km[i]; for (let j = 0; j < row.length; j++) q += row[j] * solF.f[j]; return v - q; });
+        const floor2 = dot(res, res), target = Math.sqrt(r * sigma * sigma + floor2);
+        alpha = alphaS; c = null;
+        for (let it = 0; it < o.alphaMax; it++, brdIterations++) {
+          const sol = solveFixedAlpha(Km, mt, alpha, c);
+          c = sol.c;
+          const aNew = target / (Math.sqrt(dot(c, c)) || 1e-300);
+          const rel = Math.abs(aNew - alpha) / alpha;
+          alpha = aNew;
+          if (rel < o.alphaTol) { converged = true; break; }
+        }
+        warning = 'The data could not be fitted down to the estimated noise level (' + (sigma * scale).toPrecision(3) +
+          ') in the compressed space, so α was set slightly higher. Setting the noise σ by hand gives you full control.';
       }
     }
 

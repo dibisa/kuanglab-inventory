@@ -18,7 +18,7 @@ Input: any text file with columns separated by spaces, tabs or commas (`.int`, `
 | NNLS | Unregularized non-negative least squares (Lawson–Hanson). |
 | Discrete | Multi-exponential least-squares fit (Levenberg–Marquardt) with ± errors, seeded from the regularized peaks. |
 
-If the automatic noise estimate is too low for BRD to converge, the app falls back to the S-curve α and says so; entering σ by hand fixes it.
+Defaults follow decay2distr.py: 400 grid points, SVD cutoff 1e-8, grid in whole decades from one decade below the first point. If BRD cannot reach the estimated noise level, α is raised slightly and the app says so; entering σ by hand gives full control.
 
 Kernels match `decay2distr.py`: `cpmg` = exp(−t/T), `ir` = 1 − 2 exp(−t/T), `diff` = exp(−bD), `t2g` = exp(−t²/2T²), plus saturation recovery 1 − exp(−t/T).
 

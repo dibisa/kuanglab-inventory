@@ -166,7 +166,7 @@ details[open] summary { margin-bottom: 8px; }
         <div class="row3">
           <label class="f"><span><span id="gridSym">T</span> min</span> <input type="text" id="Tmin" value="1e-4"></label>
           <label class="f"><span><span class="gs">T</span> max</span> <input type="text" id="Tmax" value="10"></label>
-          <label class="f">points <input type="number" id="nT" min="10" max="400" value="120"></label>
+          <label class="f">points <input type="number" id="nT" min="10" max="1000" value="400"></label>
         </div>
         <div class="row2">
           <label class="f">Spacing
@@ -194,7 +194,7 @@ details[open] summary { margin-bottom: 8px; }
           <label class="f">α (initial / fixed) <input type="text" id="alpha" value="1"></label>
           <label class="f">S-curve slope <input type="text" id="scurveTarget" value="0.1"></label>
           <label class="f">Noise σ (0 = auto) <input type="text" id="sigma" value="0"></label>
-          <label class="f">SVD cutoff <input type="text" id="sfactor" value="1e-4"></label>
+          <label class="f">SVD cutoff <input type="text" id="sfactor" value="1e-8"></label>
         </div>
         <p class="hint" id="optNnls" hidden>Non-negative least squares with no smoothing. Expect spiky, noise-sensitive distributions; useful as a check.</p>
         <div id="optDiscrete" hidden>
@@ -320,13 +320,13 @@ details[open] summary { margin-bottom: 8px; }
     const xs = state.raw.x.filter(v => v > 0);
     if (!xs.length) return;
     const lo = xs[0], hi = xs[xs.length - 1];
+    // Whole decades, one below the first point and up to ~3x the last, like decay2distr.py runs
+    // (e.g. 1e-5 to 10 for a CPMG train starting at 1e-4 s).
     let a, b;
-    // components much faster than the first point (or slower than ~3x the last) are not determined by the data
-    if ($('kernel').value === 'D') { a = 0.3 / hi; b = 3 / lo; }
-    else { a = lo; b = hi * 3; }
-    const nice = (v, up) => { const e = Math.floor(Math.log10(v)), m = v / Math.pow(10, e); const steps = [1, 2, 5, 10]; const k = up ? steps.find(s => s >= m - 1e-9) : steps.slice().reverse().find(s => s <= m + 1e-9); return k * Math.pow(10, e); };
-    $('Tmin').value = fmt(nice(a, true), 2);
-    $('Tmax').value = fmt(nice(b, true), 2);
+    if ($('kernel').value === 'D') { a = 0.1 / hi; b = 10 / lo; }
+    else { a = lo / 10; b = hi * 3; }
+    $('Tmin').value = fmt(Math.pow(10, Math.floor(Math.log10(a) + 1e-9)), 2);
+    $('Tmax').value = fmt(Math.pow(10, Math.ceil(Math.log10(b) - 1e-9)), 2);
   }
   function exampleData() {
     let seed = 20140501;
@@ -360,12 +360,12 @@ details[open] summary { margin-bottom: 8px; }
       if (x.length < 3) throw new Error('Fewer than 3 points fall inside the fit range.');
       let Tmin = num($('Tmin').value, 1e-4), Tmax = num($('Tmax').value, 10);
       if (!(Tmin > 0) || !(Tmax > Tmin)) throw new Error('Grid needs 0 < min < max.');
-      const nT = Math.min(400, Math.max(10, parseInt($('nT').value) || 120));
+      const nT = Math.min(1000, Math.max(10, parseInt($('nT').value) || 400));
       const method = state.method;
       const opts = {
         kernel: $('kernel').value, Tmin, Tmax, nT, gridSpace: $('gridSpace').value,
         mode: method === 'nnls' ? 'nnls' : $('alphaMode').value,
-        alpha: num($('alpha').value, 1), sigma: num($('sigma').value, 0), sfactor: num($('sfactor').value, 1e-4),
+        alpha: num($('alpha').value, 1), sigma: num($('sigma').value, 0), sfactor: num($('sfactor').value, 1e-8),
         scurveTarget: num($('scurveTarget').value, 0.1), baseline: $('baseline').checked,
       };
       const t0 = performance.now();
@@ -492,6 +492,7 @@ details[open] summary { margin-bottom: 8px; }
       ['α', state.method === 'brd' ? fmt(R.alpha) : '–'],
       ['Noise σ', fmt(R.sigma)],
       ['Fit RMS', fmt(rms)],
+      ['‖Iexp−Isim‖²/N', fmt(rms * rms)],
       ['χ²/N (σ)', fmt((rms * rms) / (R.sigma * R.sigma), 3)],
       ['SNR', fmt(R.snr, 3)],
       ['Mean ' + lab, D ? '–' : fmt(R.meanT)],
@@ -538,7 +539,7 @@ details[open] summary { margin-bottom: 8px; }
     } else {
       const pk = R.peaks.filter(p => p.fraction >= 0.005);
       html = `<thead><tr><th>Peak</th><th>${lab} at max</th><th>${lab} mean (log)</th><th>Range</th><th>Area</th><th>Fraction</th><th>Note</th></tr></thead><tbody>` +
-        pk.map((p, i) => `<tr><td><span class="swatch" style="background:${PEAK_COLORS[i % 6]}"></span>${i + 1}</td><td>${fmt(p.Tpeak)}</td><td>${fmt(p.Tmean)}</td><td>${fmt(p.from, 2)} – ${fmt(p.to, 2)}</td><td>${fmt(p.amplitude, 4)}</td><td>${(p.fraction * 100).toFixed(1)}%</td><td class="note">${p.index <= 1 || p.index >= T.length - 2 ? 'at grid edge, likely noise or out of range' : ''}</td></tr>`).join('') +
+        pk.map((p, i) => `<tr><td><span class="swatch" style="background:${PEAK_COLORS[i % 6]}"></span>${i + 1}</td><td>${fmt(p.Tpeak)}</td><td>${fmt(p.Tmean)}</td><td>${fmt(p.from, 2)} – ${fmt(p.to, 2)}</td><td>${fmt(p.amplitude, 4)}</td><td>${(p.fraction * 100).toFixed(1)}%</td><td class="note">${p.index <= 1 || p.index >= T.length - 2 ? 'at grid edge: widen the grid to check it' : ''}</td></tr>`).join('') +
         `<tr><td>total</td><td></td><td>${fmt(R.meanT)}</td><td></td><td>${fmt(R.total, 4)}</td><td>100%</td><td></td></tr></tbody>`;
     }
     if (bounds.length) {
